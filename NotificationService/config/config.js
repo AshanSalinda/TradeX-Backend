@@ -11,9 +11,9 @@ const dataSource = new typeorm.DataSource({
     database: "notification_service_db",
     synchronize: true,
     logging : ["error", "warn"],
-    ssl: {
-        rejectUnauthorized: false
-    },
+    // ssl: {
+    //     rejectUnauthorized: false
+    // },
     entities: [path.join(__dirname , ".." , "models/**/*.js")],
 });
 
