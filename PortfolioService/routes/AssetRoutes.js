@@ -3,7 +3,7 @@ const router = express.Router();
 const AssetController = require("../controllers/AssetController");
 
 
-router.get("/:wallet", AssetController.getPortfolioData);       // get all portfolio data - portfolio
+router.get("/:wallet(overview|trading|funding)", AssetController.getPortfolioData);       // get all portfolio data - portfolio
 
 router.get("/:userId/:coin", AssetController.getBalance);       // get balance of coins - trading platform
 

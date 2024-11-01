@@ -4,9 +4,11 @@ const router = express.Router();
 
 router.get("/getAllOrders", controller.getAllOrders);
 
-router.get("/getLimitOrderByCoin/:coin/:userId", controller.getAllLimitOrdersByCoin);
+router.get("/getOrderByCoinAndCategory/:coin/:userId/:category", controller.getAllOrdersByCoinAndCategory);
 
 router.get("/getOrderByCato/:type", controller.getAllOrdersByCato);
+
+router.get("/getAllOrdersByIdAndCato/:type/:id", controller.getAllOrdersByIdAndCato);
 
 router.post("/", controller.saveOrder);
 

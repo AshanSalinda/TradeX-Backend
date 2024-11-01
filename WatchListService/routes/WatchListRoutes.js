@@ -1,12 +1,10 @@
 const express = require('express');
-const controller = require("../controllers/WatchListController");
+const controller = require("../controllers/WatchlistController");
 const router = express.Router();
 
-router.get("/getAllCoins", controller.getAllCoins);
+router.get("/:userId", controller.getCoins);
 
 router.post("/", controller.saveCoins);
-
-router.delete("/:id", controller.deleteCoins);
 
 
 module.exports = router

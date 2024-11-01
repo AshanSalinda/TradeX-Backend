@@ -1,5 +1,6 @@
 const getPortfolioValueData = require("../services/PortfolioValueService").getPortfolioValueData;
 const updateTransactionHistory = require("./TransactionHistoryController").updateTransactionHistory;
+const dataSource = require("../config/config");
 const assetService = require("../services/AssetService");
 const WalletAddressService = require("../services/WalletAddressService");
 const axios = require("axios");
@@ -55,14 +56,14 @@ const getPortfolioData = async (req, res) => {
             else{
                 const assetValue = (asset.marketPrice || 1) *  totalBalance;
                 portfolioValue += assetValue;
-                updatedAsset.value = assetValue;
-                updatedAsset.marketPrice = "$ " + asset.marketPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 10,});
+                updatedAsset.value = "$ " + assetValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2,});
+                updatedAsset.marketPrice = "$ " + asset.marketPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2,});
             }
 
             if(wallet !== 'overview'){
                 if(asset.symbol === 'USD'){
                     updatedAsset.marketPrice = "- - -";
-                    updatedAsset.value = totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2,});;
+                    updatedAsset.value = "$ " + totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2,});;
                     updatedAsset.ROI = "- - -";
                     updatedAsset.RoiColor = '#FFFFFF';
                 } else {
@@ -75,10 +76,10 @@ const getPortfolioData = async (req, res) => {
 
             if(wallet !== 'overview' || asset.symbol !== 'USD'){
                 updatedAsset.symbol = asset.symbol;
-                updatedAsset.tradingBalance = asset.tradingBalance;
-                updatedAsset.holdingBalance = asset.holdingBalance;
-                updatedAsset.fundingBalance = asset.fundingBalance;
-                updatedAsset.totalBalance = totalBalance;
+                updatedAsset.tradingBalance = asset.tradingBalance.toLocaleString("en-US");
+                updatedAsset.holdingBalance = asset.holdingBalance.toLocaleString("en-US");
+                updatedAsset.fundingBalance = asset.fundingBalance.toLocaleString("en-US");
+                updatedAsset.totalBalance = totalBalance.toLocaleString("en-US");
             }
 
             return updatedAsset;
@@ -88,16 +89,21 @@ const getPortfolioData = async (req, res) => {
 
 
         if(wallet !== 'overview'){
-            updatedAssets = [ 
-                updatedAssets.find(asset => asset.symbol === 'USD'), 
-                ...updatedAssets.filter(asset => asset.symbol !== 'USD') 
-            ];
+            const usdAsset = updatedAssets.find(asset => asset.symbol === 'USD');
+
+            if(usdAsset){
+                updatedAssets = [ usdAsset, ...updatedAssets.filter(asset => asset.symbol !== 'USD') ];
+            }
+
+            else if(!usdAsset && wallet === 'funding'){
+                updatedAssets = [ {}, ...updatedAssets];
+            }
         }
         else{
             percentages = updatedAssets
                 .map(asset => ({
                     coinName: asset.symbol,
-                    percentage: (!portfolioValue) ? 0 : (asset.value / portfolioValue) * 100
+                    percentage: (!portfolioValue) ? 0 : (parseFloat(asset.value.replace(/[^0-9.]/g, '')) / portfolioValue) * 100
                 }))
 
                 .concat({ 
@@ -108,7 +114,6 @@ const getPortfolioData = async (req, res) => {
                 .sort((a, b) => b.percentage - a.percentage);
         }
 
-
         res.status(200).json({
             usdBalance: usdBalance,
             portfolioValue: portfolioValue,
@@ -116,7 +121,7 @@ const getPortfolioData = async (req, res) => {
             ...(wallet === 'overview' ? 
             { 
                 percentages: percentages, 
-                historyData: await getPortfolioValueData(userId, Number(req.query.timezoneOffset)) 
+                historyData: await getPortfolioValueData(userId) 
             } : {
                 walletAddress: await WalletAddressService.getWalletAddress(userId)
             })
@@ -166,6 +171,8 @@ const getBalance = async (req, res) => {
 
 
 const transferAsset = async (req, res) => {
+    const queryRunner = dataSource.createQueryRunner();
+
     try {
         const { userId, coin, quantity, sendingWallet, receivingWallet } = req.body;
 
@@ -176,6 +183,10 @@ const transferAsset = async (req, res) => {
             !sendingWallet || 
             !receivingWallet
         ){ return res.status(400).json({message: 'Incomplete Request Body'}); }
+
+        if(sendingWallet === receivingWallet){
+            return res.status(400).json({message: 'Invalid Wallet Address'}); 
+        }
 
 
         const assetToTransfer = ( await assetService.getAssets(userId, coin))[0];
@@ -198,42 +209,76 @@ const transferAsset = async (req, res) => {
             }
 
             else{
+                assetToTransfer[senderBalance] -= quantity;
+                
                 if(receivingWallet === 'tradingWallet' || receivingWallet === 'fundingWallet'){
                     assetToTransfer[receiverBalance]  += quantity;
-                    assetToTransfer[senderBalance] -= quantity;
                 }
 
-                else{
+                try{
+                    await queryRunner.connect();
+                    await queryRunner.startTransaction();
+
+                    await assetService.saveAsset(queryRunner, assetToTransfer);
+                    await updateTransactionHistory(queryRunner, {
+                        userId: userId,
+                        coin: coin,
+                        quantity: quantity,
+                        sendingWallet: sendingWallet === 'tradingWallet' ? 'tradingWallet' : 'fundingWallet',
+                        receivingWallet: receivingWallet,
+                    });
+                } 
+
+                catch (error) {
+                    await queryRunner.rollbackTransaction();
+                    console.log("\nError in internal operations:", error.message);
+                    return res.status(500).json({ message: "Transaction failed" });
+                }
+
+
+                if(receivingWallet !== 'tradingWallet' && receivingWallet !== 'fundingWallet'){
                     await axios.post(
                         "http://localhost:8006/wallet",
                         {
-                            userId: assetToTransfer.userId ,
                             coin: assetToTransfer.symbol ,
                             quantity: quantity ,
                             purchasePrice: assetToTransfer.AvgPurchasePrice ,
+                            sendingWallet: sendingWallet,
+                            receivingWallet: receivingWallet,
                         }
                     )
-                    .then(() => {
-                        assetToTransfer[senderBalance] -= quantity;
+                    .then(async() => {
+                        await queryRunner.commitTransaction();
+                        const wallet = sendingWallet === 'tradingWallet' ? 'trading' : 'funding';
+                        await getPortfolioData({ ...req, params: { wallet } }, res);
                     })
-                    .catch(() => {
-                        throw new Error("Transfer failed.");
+                    .catch(async(error) => {
+                        await queryRunner.rollbackTransaction();
+                        console.log("\nError in External operations:", error.message);
+
+                        return error.response ? 
+                        res.status(400).json({ message: error.response.data.message }) : 
+                        res.status(500).json({ message: "Transaction failed" });
                     });
-                }
+                } 
                 
-                await assetService.saveAsset(assetToTransfer);
-                await updateTransactionHistory(req.body);
+                else {
+                    await queryRunner.commitTransaction();
+
+                    const wallet = sendingWallet === 'tradingWallet' ? 'trading' : 'funding';
+                    await getPortfolioData({ ...req, params: { wallet } }, res);
+                }
             }
-            
-            sendingWallet === 'tradingWallet' ? 
-            await getPortfolioData({ ...req, params: { wallet: "trading" } }, res) : 
-            await getPortfolioData({ ...req, params: { wallet: "funding" } }, res);
         }
     } 
     
     catch (error) {
         console.log("\nError updating asset:", error);
         res.status(error.status || 500).json({message: error.message});
+    }
+
+    finally {
+        await queryRunner.release();
     }
 };
 
@@ -242,8 +287,11 @@ const transferAsset = async (req, res) => {
 
 
 const receiveFromEx = async (req, res) => {
+    const queryRunner = dataSource.createQueryRunner();
+
     try {
-        const { coin, quantity, AvgPurchasePrice, receivingWallet, sendingWallet } = req.body;
+        console.log("nng",req.body)
+        let { coin, quantity, AvgPurchasePrice, receivingWallet, sendingWallet } = req.body;
         if( 
             !receivingWallet || 
             !sendingWallet || 
@@ -257,6 +305,7 @@ const receiveFromEx = async (req, res) => {
         AvgPurchasePrice = (coin === 'USD') ? 1 : AvgPurchasePrice;
 
         const userId = await WalletAddressService.getUserId(receivingWallet);
+        const sender = await WalletAddressService.getUserName(sendingWallet);
 
         if(!userId){ return res.status(400).json({message: 'Invalid Wallet Address'}); }
 
@@ -281,22 +330,52 @@ const receiveFromEx = async (req, res) => {
             assetToUpdate.fundingBalance += quantity;
         }
 
-        await assetService.saveAsset(assetToUpdate);
 
-        await updateTransactionHistory({
-            userId: userId,
-            coin: coin,
-            quantity: quantity,
-            sendingWallet: sendingWallet,
-            receivingWallet: 'fundingWallet',
-        });
+        try{
+            queryRunner.connect();
+            queryRunner.startTransaction();
+
+            await assetService.saveAsset(queryRunner, assetToUpdate);
+            await updateTransactionHistory(queryRunner, {
+                userId: userId,
+                coin: coin,
+                quantity: quantity,
+                sendingWallet: sendingWallet,
+                receivingWallet: 'fundingWallet',
+            });
+        }
+
+        catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.log("\nError in internal operations:", error.message);
+            return res.status(500).json({ message: "Transaction failed" });
+        }
         
+        await queryRunner.commitTransaction();
+
+
+        await axios.post("http://localhost:8002/notification/send/app", {
+            userId: userId,
+            title: "Asset Received",
+            body: `You have received ${req.body.quantity} ${req.body.coin} from ${sender}`,
+            onClick: "http://localhost:3000/portfolio/fundingWallet"
+        }).then(() => {
+            console.log("\nNotification sent");
+        }).catch((error) => {
+            console.log("\nError sending notification:", error.message);
+        });
+
+
         res.status(200).json({message: "Asset Updated"}); 
     } 
     
     catch (error) {
         console.log("\nError adding asset:", error);
-        res.status(500).json({message: error.message});
+        res.status(500).json({message: "Transaction failed"});
+    }
+
+    finally {
+        await queryRunner.release();
     }
 };
 
@@ -327,7 +406,7 @@ const releaseAsset = async (req, res) => {
                 assetToRelease.holdingBalance -= quantity;
                 assetToRelease.tradingBalance += quantity;
 
-                const updatedAsset = await assetService.saveAsset(assetToRelease);
+                const updatedAsset = await assetService.saveAsset(null, assetToRelease);
                 
                 res.status(200).json({
                     coin: updatedAsset.symbol,
@@ -369,7 +448,7 @@ const deductAsset = async (req, res) => {
             else{
                 assetToDeduct.holdingBalance -= req.body.quantity;
 
-                const updatedAsset = await assetService.saveAsset(assetToDeduct);
+                const updatedAsset = await assetService.saveAsset(null, assetToDeduct);
 
                 res.status(200).json({
                     coin: updatedAsset.symbol,
@@ -391,6 +470,8 @@ const deductAsset = async (req, res) => {
 
 
 const executeTrade = async (req, res) => {
+    const queryRunner = dataSource.createQueryRunner();
+
     try {
         const { userId, coin, quantity, price, category, type } = req.body;
 
@@ -476,9 +557,25 @@ const executeTrade = async (req, res) => {
             }         
         }
 
+        console.log("assetToUpdate", assetToUpdate);	
+        console.log("usdAsset", usdAsset);
 
-        await assetService.saveAsset(assetToUpdate);
-        await assetService.saveAsset(usdAsset);
+        try{
+            queryRunner.connect();
+            queryRunner.startTransaction();
+
+            await assetService.saveAsset(queryRunner, assetToUpdate);
+            await assetService.saveAsset(queryRunner, usdAsset);
+        }
+
+        catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.log("\nError in executing orders:", error.message);
+            return res.status(500).json({ message: "Transaction failed in portfolio" });
+        }
+        
+
+        await queryRunner.commitTransaction();
 
         res.status(200).json(
             await getBalance({params:{userId: userId, coin: `${coin},USD`}}, null)
@@ -488,6 +585,10 @@ const executeTrade = async (req, res) => {
     catch (error) {
         console.log("\nError adding asset:", error);
         res.status(500).json({message: error.message});
+    }
+
+    finally {
+        await queryRunner.release();
     }
 };
 
@@ -502,9 +603,11 @@ const allocateUSD = async (req, res) => {
             return res.status(400).json({message: 'Invalid Request Body'});
         }
 
-        await WalletAddressService.generateWalletAddress(req, null)
+        await WalletAddressService.generateWalletAddress(req, null);
 
-        await assetService.saveAsset({
+        await assetService.deleteAll(userId);
+
+        await assetService.saveAsset(null, {
             userId: userId,
             symbol: 'USD',
             AvgPurchasePrice: 1,

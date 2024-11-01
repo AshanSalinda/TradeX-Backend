@@ -2,62 +2,62 @@ const dataSource = require('./config/config');
 
 
 const createTriggerFunctions = async () => {
-    await portfolioValueQueue();
-    await emptyAssetsDeleter();
+    await portfolioValueQueueHandler();
+    await emptyAssetsRemover();
 }
 
 
 
 
-const portfolioValueQueue = async () => {
+const portfolioValueQueueHandler = async () => {
 
     const sqlQuery = `
-    CREATE OR REPLACE FUNCTION update_portfolio_value() RETURNS TRIGGER AS $$
+    CREATE OR REPLACE FUNCTION portfolio_value_queue_handler() RETURNS TRIGGER AS $$
     DECLARE
-        lastRecordNo INT;
-        recordHolder RECORD;
+        maxRecordCount INT;
     BEGIN
+
         CASE TG_TABLE_NAME
-            WHEN 'portfolioHourlyValue' THEN lastRecordNo := 24;
-            WHEN 'portfolioDailyValue' THEN lastRecordNo := 31;
-            WHEN 'portfolioWeeklyValue' THEN lastRecordNo := 53;
+            WHEN 'portfolioHourlyValue' THEN maxRecordCount := 24;
+            WHEN 'portfolioDailyValue' THEN maxRecordCount := 31;
+            WHEN 'portfolioWeeklyValue' THEN maxRecordCount := 53;
         END CASE;
+    
+        EXECUTE format('
+            DELETE FROM %I
+            WHERE "userId" = $1 AND "time" IN (
+                SELECT "time"
+                FROM %I
+                WHERE "userId" = $1
+                ORDER BY "time" DESC
+                OFFSET $2
+            )', TG_TABLE_NAME, TG_TABLE_NAME)
+        USING NEW."userId", maxRecordCount;
 
-        EXECUTE format('DELETE FROM %I WHERE "userId" = $1 AND "recordNo" = $2', TG_TABLE_NAME)
-        USING NEW."userId", lastRecordNo;
-
-        FOR recordHolder IN
-            EXECUTE format('SELECT * FROM %I WHERE "userId" = $1 ORDER BY "recordNo" DESC', TG_TABLE_NAME)
-            USING NEW."userId"
-        LOOP
-            EXECUTE format('UPDATE %I SET "recordNo" = "recordNo" + 1 WHERE "userId" = $1 AND "recordNo" = $2', TG_TABLE_NAME)
-            USING recordHolder."userId", recordHolder."recordNo";
-        END LOOP;
-
-        RETURN NEW;
+        return null;
     END;
     $$ LANGUAGE plpgsql;
 
 
 
-    CREATE OR REPLACE TRIGGER update_portfolio_hourly_value_trigger
-        BEFORE INSERT ON "portfolioHourlyValue"
+    CREATE OR REPLACE TRIGGER hourly_value_queue_trigger
+        AFTER INSERT ON "portfolioHourlyValue"
         FOR EACH ROW
-        EXECUTE FUNCTION update_portfolio_value();
+        EXECUTE FUNCTION portfolio_value_queue_handler();
 
 
-    CREATE OR REPLACE TRIGGER update_portfolio_daily_value_trigger
-        BEFORE INSERT ON "portfolioDailyValue"
+    CREATE OR REPLACE TRIGGER daily_value_queue_trigger
+        AFTER INSERT ON "portfolioDailyValue"
         FOR EACH ROW
-        EXECUTE FUNCTION update_portfolio_value();
+        EXECUTE FUNCTION portfolio_value_queue_handler();
 
 
-    CREATE OR REPLACE TRIGGER update_portfolio_weekly_value_trigger
-        BEFORE INSERT ON "portfolioWeeklyValue"
+    CREATE OR REPLACE TRIGGER weekly_value_queue_trigger
+        AFTER INSERT ON "portfolioWeeklyValue"
         FOR EACH ROW
-        EXECUTE FUNCTION update_portfolio_value();
-
+        EXECUTE FUNCTION portfolio_value_queue_handler();
     `;
+    
 
     try {
         await dataSource.query(sqlQuery);
@@ -69,10 +69,10 @@ const portfolioValueQueue = async () => {
 
 
 
-const emptyAssetsDeleter = async () => {
+const emptyAssetsRemover = async () => {
 
     const sqlQuery = `
-        CREATE OR REPLACE FUNCTION emptyAssetsDeleter()
+        CREATE OR REPLACE FUNCTION empty_assets_remover()
         RETURNS TRIGGER AS $$
         DECLARE
             total_balance FLOAT;
@@ -98,18 +98,18 @@ const emptyAssetsDeleter = async () => {
         CREATE OR REPLACE TRIGGER check_and_delete_asset_on_insert_trigger
         AFTER INSERT ON asset
         FOR EACH ROW
-        EXECUTE FUNCTION emptyAssetsDeleter();
+        EXECUTE FUNCTION empty_assets_remover();
         
         CREATE OR REPLACE TRIGGER check_and_delete_asset_on_update_trigger
         AFTER UPDATE ON asset
         FOR EACH ROW
-        EXECUTE FUNCTION emptyAssetsDeleter();`
+        EXECUTE FUNCTION empty_assets_remover();`
     ;
 
     try {
         await dataSource.query(sqlQuery);
     } catch (error) {
-        console.error('\n\nError creating emptyAssetsDeleter trigger function:\n\n', error);
+        console.error('\n\nError creating emptyAssetsRemover trigger function:\n\n', error);
     }
 }
 

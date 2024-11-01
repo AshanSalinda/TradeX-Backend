@@ -39,7 +39,7 @@ dataSource.initialize()
 .then(async() => {
     await createTriggerFunctions();
     await startGettingMarketPrices();
-    await runScheduledValueUpdaters();
+    runScheduledValueUpdaters();
 
     console.log("Database connected!!");
 

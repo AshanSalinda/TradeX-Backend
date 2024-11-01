@@ -2,11 +2,13 @@ const express = require('express');
 const controller = require("../controllers/EduController");
 const router = express.Router();
 
-router.get("/getAllEduResources", controller.getAllEduResources);
+router.get("/getAllEduResources/:userId", controller.getAllEduResources);
+
+router.get("/getFavEduResources/:userId", controller.getFavEduResources);
 
 router.post("/", controller.saveEduResources);
 
-router.delete("/:id", controller.deleteEduResources);
+router.post("/favorite", controller.favorite);
 
 
 module.exports = router

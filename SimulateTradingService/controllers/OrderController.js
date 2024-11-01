@@ -1,5 +1,6 @@
 const dataSource = require("../config/config");
 
+
 const getAllOrders = async (req, res) => {
     const orderRepo = dataSource.getRepository("Order");
     try {
@@ -14,8 +15,7 @@ const getAllOrders = async (req, res) => {
 const getAllOrdersByType = async (type, orderStatus) => {
     try {
         const OrderRepo = dataSource.getRepository("Order");
-        const orders = await OrderRepo.find({ where: { category: type, orderStatus: orderStatus } });
-        return orders;
+        return await OrderRepo.find({where: {category: type, orderStatus: orderStatus}});
     } catch (error) {
         console.error(`Error fetching ${type} orders with status ${orderStatus}:`, error);
         throw error;
@@ -24,6 +24,7 @@ const getAllOrdersByType = async (type, orderStatus) => {
 
 const getAllOrdersByCato = async (req,res) => {
     try {
+
         const type = req.params.type;
         const OrderRepo = dataSource.getRepository("Order");
         const orders=await OrderRepo.find({where: {type: type}});
@@ -34,12 +35,12 @@ const getAllOrdersByCato = async (req,res) => {
     }
 };
 
-const getAllLimitOrdersByCoin = async (req, res) => {
+const getAllOrdersByIdAndCato = async (req,res) => {
     try {
-        const coin = req.params.coin;
-        const userId = req.params.userId;
+        const type = req.params.type;
+        const id = req.params.id;
         const OrderRepo = dataSource.getRepository("Order");
-        const orders=await OrderRepo.find({where: {coin: coin, userId: userId, category: 'Limit', orderStatus: 'Pending'}});
+        const orders=await OrderRepo.find({where: {userId: id, type: type, orderStatus: 'Completed'}});
         res.json(orders);
     } catch (error) {
         console.error(`Error fetching orders:`, error);
@@ -47,6 +48,22 @@ const getAllLimitOrdersByCoin = async (req, res) => {
     }
 };
 
+const getAllOrdersByCoinAndCategory = async (req, res) => {
+    try {
+        const coin = req.params.coin;
+        const category = req.params.category;
+        const userId = req.params.userId;
+        console.log(coin,category, userId);
+        const OrderRepo = dataSource.getRepository("Order");
+        const orders=await OrderRepo.find({where: {coin: coin, userId: userId, category: category, orderStatus: 'Pending'}});
+        res.json(orders);
+        console.log('0000000000000000000')
+        console.log(orders);
+    } catch (error) {
+        console.error(`Error fetching orders:`, error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
 
 const saveOrder = async (req, res) => {
@@ -77,6 +94,29 @@ const updateOrderStatus = async (orderId, newStatus) => {
         order.orderStatus = newStatus;
         await OrderRepo.save(order);
         console.log(`Order ${orderId} status updated to '${newStatus}'`);
+    } catch (error) {
+        console.error(`Error updating order status for order ${orderId}:`, error);
+        throw error;
+    }
+};
+
+const updateOrderCategory = async (orderId, category) => {
+    try {
+        const OrderRepo = dataSource.getRepository("Order");
+        const order= await OrderRepo.findOne({
+            where: {
+                orderId: orderId,
+            },
+        });
+
+        if (!order) {
+            console.error(`Order with ID ${orderId} not found.`);
+            return;
+        }
+
+        order.category = category;
+        await OrderRepo.save(order);
+        console.log(`Order ${orderId} status updated to '${category}'`);
     } catch (error) {
         console.error(`Error updating order status for order ${orderId}:`, error);
         throw error;
@@ -136,7 +176,9 @@ module.exports = {
     deleteOrder,
     getAllOrdersByType,
     updateOrderStatus,
-    getAllLimitOrdersByCoin,
+    getAllOrdersByCoinAndCategory,
     getAllOrdersByCato,
-    updateOrderTime
+    updateOrderTime,
+    updateOrderCategory,
+    getAllOrdersByIdAndCato
 };

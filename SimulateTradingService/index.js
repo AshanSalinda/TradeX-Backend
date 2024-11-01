@@ -8,7 +8,12 @@ const suggestionRouter = require("./routes/SuggetionRoutes");
 const startRealtimeMonitoring = require("./LimitOrderMonitoring");
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
 app.use("/quiz",quizRouter);
 app.use("/order",orderRouter);
 app.use("/suggestion",suggestionRouter);
@@ -26,6 +31,7 @@ app.use((error, req, res) => {
         message: error.message
     });
 });
+
 
 dataSource.initialize()
 

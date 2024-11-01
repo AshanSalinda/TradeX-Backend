@@ -1,0 +1,30 @@
+{
+  "name": "alert-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "nodemon index.js",
+    "test:not": "jest --config ../TestConfigs/jest.not.config.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "fs": "^0.0.1-security",
+    "nodemailer": "^6.9.13",
+    "nodemon": "^3.0.3",
+    "pg": "^8.11.3",
+    "typeorm": "^0.3.20",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  }
+}

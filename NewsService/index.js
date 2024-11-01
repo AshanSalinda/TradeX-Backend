@@ -3,9 +3,15 @@ const cors = require('cors');
 const app = express();
 const dataSource = require("./config/config");
 const newsRouter = require("./routes/NewsRoutes");
+const {webSocketStart} = require("./controllers/NewsController");
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
 app.use("/news",newsRouter);
 
 app.use((req, res) => {
@@ -26,9 +32,10 @@ dataSource.initialize()
 
     .then(() => {
         console.log("Database connected!!");
+        webSocketStart();
 
         app.listen(8008, () => {
-            console.log("User Service running on Port 8008");
+            console.log("News Service running on Port 8008");
         })
     })
 

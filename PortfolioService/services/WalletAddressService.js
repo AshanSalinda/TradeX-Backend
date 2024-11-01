@@ -1,20 +1,28 @@
-const CryptoJS = require("crypto-js");
+require("dotenv").config();
+const secretKey = process.env.SECRET_KEY;
 const dataSource = require("../config/config");
 const walletAddressRepo = dataSource.getRepository("WalletAddress");
+const CryptoJS = require("crypto-js");
+
+
 
 const generateWalletAddress = async (req, res) => {
     try{
         const { userName, userId } = req.body;
+
+        if(!userId || !userName){
+            return !res ? false : res.status(400).json({ message: "userId and userName are required" });
+        }
+
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         const iv = CryptoJS.lib.WordArray.random(16);
-        const secretKey = "portfolioUser@TradeX";
         let margin = '';
 
-        for(let i=0; i < 25 - userName.length; i++){
+        for(let i = 0; i < 25 - userName.length; i++){
             margin += (i === 0) ? ':' : characters.charAt(Math.floor(Math.random() * characters.length));
         }
 
-        const walletAddress = CryptoJS.AES.encrypt(userName + margin, secretKey, { iv: iv }).toString();
+        const walletAddress = CryptoJS.AES.encrypt(userName + margin, secretKey, {iv: iv}).toString();
 
         const isExists = await walletAddressRepo.exists({ where: { walletAddress } });
 
@@ -36,8 +44,8 @@ const generateWalletAddress = async (req, res) => {
 
 const getWalletAddress = async (userId) => {
     try{
-        const { walletAddress } = await walletAddressRepo.findOne({ where:{ userId }});
-        return walletAddress;
+        const data = await walletAddressRepo.findOne({ where:{ userId }});
+        return !data ? null: data.walletAddress;
     }
     catch(error){
         console.log("error fetching wallet Address", error);
@@ -49,8 +57,8 @@ const getWalletAddress = async (userId) => {
 
 const getUserId = async (walletAddress) => {
     try{
-        const { userId } = await walletAddressRepo.findOne({ where:{ walletAddress }});
-        return userId;
+        const data = await walletAddressRepo.findOne({ where:{ walletAddress }});
+        return !data ? null : data.userId;
     }
     catch(error){
         console.log("error fetching user", error);
@@ -60,8 +68,24 @@ const getUserId = async (walletAddress) => {
 
 
 
+const getUserName = async (walletAddress) => {
+    try{
+        return CryptoJS.AES
+        .decrypt(walletAddress, secretKey)
+        .toString(CryptoJS.enc.Utf8)
+        .split(":")[0];
+    }
+    catch(error){
+        console.log("Error decrypting wallet address:", error);
+        return null;
+    }
+}
+
+
+
 module.exports = {
     generateWalletAddress,
     getWalletAddress,
-    getUserId
+    getUserId,
+    getUserName
 };

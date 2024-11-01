@@ -19,11 +19,13 @@ const updatePortfolioValueOf = async (intoTable) => {
         await assetOperations.getRealtimeTotalValues() :
         await valueOperations.getAvgValuesFrom(fromTable);
 
+        const time = Math.floor((new Date().getTime()) / 1000);
+
 
         if (dataToUpdate.length === 0) { return }
 
         dataToUpdate.forEach(data => {
-            data.time = new Date().toISOString();
+            data.time = time;
         });
 
         await valueOperations.updateValueOf(dataToUpdate, intoTable);

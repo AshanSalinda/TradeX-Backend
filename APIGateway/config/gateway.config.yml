@@ -1,0 +1,234 @@
+http:
+  port: 8080
+
+admin:
+  port: 9876
+  host: localhost
+
+apiEndpoints:
+  order-api:
+    host: 'localhost'
+    paths:
+      - '/order/*'
+      - '/order'
+      - '/quiz/*'
+      - '/suggestion/*'
+  user-public-api:
+    host: 'localhost'
+    paths:
+      - '/user/register'
+      - '/user/login'
+      - '/user/refreshToken'
+      - '/user/logout'
+  user-api:
+    host: 'localhost'
+    paths: '/user/*'
+  admin-public-api:
+    host: 'localhost'
+    paths:
+      - '/admin/login'
+  admin-api:
+    host: 'localhost'
+    paths: '/admin/*'
+  alert-api:
+    host: 'localhost'
+    paths:
+      - '/alert/*'
+      - '/notification/*'
+  wallet-api:
+    host: 'localhost'
+    paths:
+      - '/wallet/*'
+      - '/history/*'
+      - '/walletLogin/*'
+      - '/seedphrase/*'
+  education-api:
+    host: 'localhost'
+    paths: '/education/*'
+  forum-api:
+    host: 'localhost'
+    paths:
+      - '/forum/*'
+      - '/answers/*'
+  news-api:
+    host: 'localhost'
+    paths: '/news/*'
+  portfolio-api:
+    host: 'localhost'
+    paths:
+      - '/portfolio/asset/*'
+      - '/portfolio/value/*'
+      - '/portfolio/address/*'
+      - '/portfolio/history/*'
+  watchList-api:
+    host: 'localhost'
+    paths: '/watchList/*'
+
+serviceEndpoints:
+  order-service:
+    url: 'http://localhost:8005'
+  suggestion-service:
+    url: 'http://localhost:8005'
+  user-service:
+    url: 'http://localhost:8004'
+  admin-service:
+    url: 'http://localhost:8003'
+  alert-service:
+    url: 'http://localhost:8002'
+  wallet-service:
+    url: 'http://localhost:8006'
+  education-service:
+    url: 'http://localhost:8009'
+  forum-service:
+    url: 'http://localhost:8010'
+  news-service:
+    url: 'http://localhost:8008'
+  portfolio-service:
+    url: 'http://localhost:8011'
+  watchList-service:
+    url: 'http://localhost:8007'
+
+policies:
+  - basic-auth
+  - cors
+  - expression
+  - key-auth
+  - log
+  - oauth2
+  - proxy
+  - rate-limit
+  - jwt
+  - checkRole
+
+pipelines:
+  order-pipeline:
+    apiEndpoints:
+      - order-api
+    policies:
+      - cors:
+          - action:
+              origin: 'http://localhost:3000'
+              methods: [ 'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' ]
+              headers: [ 'Authorization', 'Content-Type' ]
+              credentials: true
+              changeOrigin: true
+      - jwt:
+          - action:
+              secretOrPublicKey: ${JWT_SECRET}
+              checkCredentialExistence: false
+      - checkRole:
+          - action:
+              roles: [ 'Admin', 'Trader', 'User' ]
+      - proxy:
+          - action:
+              serviceEndpoint: order-service
+              changeOrigin: true
+  user-public-pipeline:
+    apiEndpoints:
+      - user-public-api
+    policies:
+      - cors:
+          - action:
+              origin: 'http://localhost:3000'
+              methods: [ 'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' ]
+              headers: [ 'Authorization', 'Content-Type' ]
+              credentials: true
+              changeOrigin: true
+      - proxy:
+          - action:
+              serviceEndpoint: user-service
+              changeOrigin: true
+  user-pipeline:
+    apiEndpoints:
+      - user-api
+    policies:
+      - cors:
+          - action:
+              origin: 'http://localhost:3000'
+              methods: [ 'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' ]
+              headers: [ 'Authorization', 'Content-Type' ]
+              credentials: true # Allow credentials
+              changeOrigin: true
+      - proxy:
+          - action:
+              serviceEndpoint: user-service
+              changeOrigin: true
+  admin-public-pipeline:
+    apiEndpoints:
+      - admin-public-api
+    policies:
+      - cors:
+          - action:
+              origin: 'http://localhost:3000'
+              methods: [ 'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' ]
+              headers: [ 'Authorization', 'Content-Type' ]
+              credentials: true
+              changeOrigin: true
+      - proxy:
+          - action:
+              serviceEndpoint: admin-service
+              changeOrigin: true
+  admin-pipeline:
+    apiEndpoints:
+      - admin-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: admin-service
+              changeOrigin: true
+  alert-pipeline:
+    apiEndpoints:
+      - alert-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: alert-service
+              changeOrigin: true
+  wallet-pipeline:
+    apiEndpoints:
+      - wallet-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: wallet-service
+              changeOrigin: true
+  education-pipeline:
+    apiEndpoints:
+      - education-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: education-service
+              changeOrigin: true
+  forum-pipeline:
+    apiEndpoints:
+      - forum-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: forum-service
+              changeOrigin: true
+  news-pipeline:
+    apiEndpoints:
+      - news-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: news-service
+              changeOrigin: true
+  portfolio-pipeline:
+    apiEndpoints:
+      - portfolio-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: portfolio-service
+              changeOrigin: true
+  watchList-pipeline:
+    apiEndpoints:
+      - watchList-api
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: watchList-service
+              changeOrigin: true

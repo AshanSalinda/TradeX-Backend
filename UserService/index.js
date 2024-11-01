@@ -3,56 +3,26 @@ const cors = require("cors");
 const app = express();
 const dataSource = require("./config/config");
 const userRouter = require("./routes/UserRoutes");
+const adminRouter = require("./routes/AdminRoutes");
+require("dotenv").config();
 const cookieParser = require("cookie-parser");
+const { refreshToken } = require("./controllers/UserController");
+const bodyParser = require("body-parser");
 
 app.use(express.json());
-app.use(cors());
-app.use("/user", userRouter);
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Authorization", "Content-Type"],
+  })
+);
+
+app.use(bodyParser.json());
 app.use(cookieParser());
-
-// app.post("/register", async (req, res) => {
-//   const { userName, password, email } = req.body;
-//   try {
-//     const hash = await bcrypt.hash(password, 10);
-//     const userRepository = dataSource.getRepository(User);
-//     const user = userRepository.create({
-//       userName: userName,
-//       email: email,
-//       password: hash,
-//     });
-//     await userRepository.save(user);
-//     res.json("USER REGISTERED");
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// });
-
-// app.post("/Login", async (req, res) => {
-//   const userRepository = dataSource.getRepository(User);
-//   const { userName, password } = req.body;
-//   const user = await userRepository.findOne({ where: { userName: userName } });
-
-//   if (!user) {
-//     res.status(400).json({ error: "User doesn't exist" });
-//   }
-
-//   const dbPassword = user.password;
-//   bcrypt.compare(password, dbPassword).then((match) => {
-//     if (!match) {
-//       res
-//         .status(400)
-//         .json({ error: "Wrong Username and Password Combination!" });
-//     } else {
-//       const accessToken = createTokens(user);
-//       res.cookie("access-token", accessToken, {
-//         maxAge: 60 * 60 * 24 * 30 * 1000,
-//         httpOnly: true,
-//       });
-
-//       res.json("logged in");
-//     }
-//   });
-// });
+app.use("/user", userRouter);
+app.use("/admin", adminRouter);
 
 // Handle 404 errors
 app.use((req, res) => {

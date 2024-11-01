@@ -39,6 +39,12 @@ module.exports = new EntitySchema({
         nicImg2: {
             type: "varchar"
         },
+        requestDate: {
+            type: "date"
+        },
 
     },
+
+
+
 });

@@ -1,16 +1,18 @@
 const express = require('express');
 const controller = require("../controllers/WalletLoginController");
 const router = express.Router();
-const {validateToken} = require('../JWT')
 
 
 router.post("/register", controller.register);
 
-
 router.post("/login", controller.login);
 
+router.post("/reset", controller.resetPassword);
 
-router.get("/profile", validateToken,  controller.profile);
+router.get("/checkUsername/:userName", controller.checkUserName);
+
+router.post("/refreshToken", controller.refreshToken);
+
 
 
 

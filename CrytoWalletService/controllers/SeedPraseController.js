@@ -1,20 +1,21 @@
-const express = require('express');
 const dataSource = require("../config/config");
 const { shuffle } = require("lodash"); // Import shuffle function from lodash
+const seedPhraseRepo = dataSource.getRepository("UserDetail");
+
 
 const words = [
-    "word1",
-    "word2",
-    "word3",
-    "word4",
-    "word5",
-    "word6",
-    "word7",
-    "word8",
-    "word9",
-    "word10",
-    "word11",
-    "word12",
+    "apple",
+    "banana",
+    "cherry",
+    "date",
+    "car",
+    "fig",
+    "grape",
+    "bike",
+    "kiwi",
+    "lemon",
+    "mango",
+    "phone"
 ];
 
 const shuffleWords = () => {
@@ -23,17 +24,35 @@ const shuffleWords = () => {
     return shuffledWords.join(','); // Join shuffled words into a single string
 };
 
-const checkSimilarities = async (shuffledWords) => {
-    const seedPhraseRepo = dataSource.getRepository("SeedPhrase");
-    // Query the database to check for similarities with shuffledWords
-    const seedPhrases = await seedPhraseRepo.find();
-    for (const seedPhrase of seedPhrases) {
-        // Compare the shuffled words with the seed phrase records
-        if (seedPhrase.words === shuffledWords) {
-            return true; // Similarities found
+const getSeedPhraseByUseName = async (req, res) => {
+    try {
+        const userName = req.params.userName;
+
+        if(!userName) {
+            return res.status(400).json({message: "Please fill all the fields"});
         }
+
+        const user = await seedPhraseRepo.findOne({where: {userName}});
+
+        if(!user) {
+            return res.status(400).json({message: "Invalid Username"});
+        }
+
+        console.log('Seed Phrase:', user.seedPhrase);
+
+        res.status(200).json({seedPhrase: user.seedPhrase});
+    } catch (error) {
+        console.error('Error fetching seedPhrase:', error);
+        res.status(500).json({ message: 'An error occurred. Please try again.'});
     }
-    return false; // No similarities found
+};
+
+
+const checkSimilarities = async (seedPhrase) => {
+    // Query the database to check for similarities with shuffledWords
+    const similarSeedPhrase = await seedPhraseRepo.findOne({ where: {seedPhrase}});
+
+    return !similarSeedPhrase ? false : true;
 };
 
 const getUniqueShuffledWords = async (req, res) => {
@@ -43,9 +62,15 @@ const getUniqueShuffledWords = async (req, res) => {
         shuffledWords = shuffleWords();
         similaritiesFound = await checkSimilarities(shuffledWords);
     }
-    res.json({ words: shuffledWords.split(',') }); // Split the string back into an array before sending to frontend
+    res.json(shuffledWords);
+};
+
+const getWords = async (req, res) => {
+    res.status(200).json(words);
 };
 
 module.exports = {
-    getUniqueShuffledWords
+    getUniqueShuffledWords,
+    getSeedPhraseByUseName,
+    getWords
 };

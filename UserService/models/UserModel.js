@@ -20,5 +20,18 @@ module.exports = new EntitySchema({
     password: {
       type: "varchar",
     },
+    issue: {
+      type: "varchar",
+    },
+    hasTakenQuiz: {
+      type: "boolean",
+    },
+    level: {
+      type: "varchar",
+    },
+    role: {
+      type: "varchar",
+    },
   },
 });
+

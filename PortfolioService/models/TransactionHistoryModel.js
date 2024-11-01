@@ -23,18 +23,27 @@ module.exports = new EntitySchema({
             nullable: false,
         },
         date: {
-            type: "timestamp with time zone",
+            type: "bigint",
             nullable: false,
         },
         sendingWallet: {
             type: "varchar",
             length: 25,
-            nullable: false,
+            nullable: true,
         },
         receivingWallet: {
             type: "varchar",
             length: 25,
-            nullable: false,
+            nullable: true,
         },
     },
+
+    relations: {
+        walletAddress: {
+            type: "many-to-one",
+            target: "WalletAddress",
+            joinColumn: { name: "userId" },
+            onDelete: "CASCADE",
+        },
+    }
 })

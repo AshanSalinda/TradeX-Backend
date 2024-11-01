@@ -1,35 +1,22 @@
-const {sign,verify} = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const createTokens = (user) => {
-    const accessToken = sign({username: user.userName, id: user.userId},
-        "jwtsecretplschange"
-        );
-    return accessToken
+
+const createAccessToken = (user) => {
+  return jwt.sign(
+      { id: user.userId, userName: user.userName, roles: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+  );
 };
 
-const validateToken = (req,res,next) => {
-   
-    const accessToken = req.cookies["access-token"] ;
-
-    if (!accessToken)
-     return res.status(400).json({error:"User not Authenticated"});
-
-     try{
-        const validToken = verify(accessToken,"jwtsecretplschange")
-        if (validToken){
-            req.authenticated = true
-            return next()
-        }else{
-            return res.status(400).json({message:"not valid user"});
-
-        }
-        
-
-
-     } catch(error){
-        return res.status(400).json({error:error});
-
-     }
+const createRefreshToken = (user) => {
+  return jwt.sign(
+      { id: user.userId },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '30d' }
+  );
 };
 
-module.exports = {createTokens,validateToken};
+module.exports = { createAccessToken,createRefreshToken};

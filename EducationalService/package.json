@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
-    
+    "test": "jest",
+    "start": "nodemon index.js",
+    "test:edu": "jest --config ../TestConfigs/jest.edu.config.js"
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +16,9 @@
     "nodemon": "^3.1.0",
     "pg": "^8.11.3",
     "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   }
 }

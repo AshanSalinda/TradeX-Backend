@@ -6,7 +6,7 @@ const watchlistRouter = require("./routes/WatchListRoutes");
 
 app.use(express.json());
 app.use(cors());
-app.use("/watchList",watchlistRouter);
+app.use("/watchlist",watchlistRouter);
 
 app.use((req, res) => {
     console.log(`${req.originalUrl} Endpoint Not found`);
@@ -28,7 +28,7 @@ dataSource.initialize()
     console.log("Database connected!!");
 
     app.listen(8007, () => {
-        console.log("User Service running on Port 8007");
+        console.log("Watchlist Service running on Port 8007");
     })
 })
 

@@ -1,10 +1,9 @@
-const CryptoJS = require("crypto-js");
 const dataSource = require("../config/config");
 const TransactionHistoryRepo = dataSource.getRepository("TransactionHistory");
+const { getUserName } = require("../services/WalletAddressService");
 
 const getTransactionHistory = async (req, res) => {
     try {
-        const timezoneOffset = !req.query.timezoneOffset ? 0 : req.query.timezoneOffset;
 
         if (!req.query.userId) {
             res.status(404).json({ message: 'User Id not found' });
@@ -20,15 +19,6 @@ const getTransactionHistory = async (req, res) => {
                 },
             });
 
-            transactionHistoryData.forEach((historyData) => {
-                const date = new Date(historyData.date.getTime() - (timezoneOffset * 60 * 1000));
-
-                historyData.date = 
-                    String(date.getUTCDate()).padStart(2,'0') + 
-                    '-' + String(date.getUTCMonth()+1).padStart(2,'0') + 
-                    '-' + date.getUTCFullYear();
-            });
-
 
             res.status(200).json(transactionHistoryData);
         }
@@ -41,9 +31,22 @@ const getTransactionHistory = async (req, res) => {
 }
 
 
-const updateTransactionHistory = async (historyData) => {
-    const secretKey = "portfolioUser@TradeX";
-    console.log("receivingWallet", historyData.receivingWallet);
+const updateTransactionHistory = async (queryRunner, historyData) => {
+    switch (historyData.sendingWallet){
+        case 'fundingWallet':
+            historyData.sendingWallet = 'Funding Wallet';
+            break;
+
+        case 'tradingWallet':
+            historyData.sendingWallet = 'Trading Wallet';
+            break;
+
+        default:
+            historyData.sendingWallet = await getUserName(historyData.sendingWallet);
+            break;
+    }
+
+
     switch (historyData.receivingWallet){
         case 'fundingWallet':
             historyData.receivingWallet = 'Funding Wallet';
@@ -54,27 +57,17 @@ const updateTransactionHistory = async (historyData) => {
             break;
 
         default:
-            try{ historyData.receivingWallet = CryptoJS.AES
-                .decrypt(historyData.receivingWallet, secretKey)
-                .toString(CryptoJS.enc.Utf8)
-                .split(":")[0];
-
-            } catch (error) {
-                console.log("\nError decrypting wallet address:", error);
-                historyData.receivingWallet = null;
-            }
+            historyData.receivingWallet = await getUserName(historyData.receivingWallet);
+            break;
     }
 
-    console.log("receivingWallet2", historyData.receivingWallet);
 
-
-    // historyData.date = new Date().toISOString();.toLocaleDateString('en-GB').replace(/\//g, '-');
-    historyData.date = new Date().toISOString();
-    historyData.sendingWallet = historyData.sendingWallet === 'fundingWallet' ? 'Funding Wallet' : 'Trading Wallet';
+    historyData.date = new Date().getTime();
+    historyData.sendingWallet = historyData.sendingWallet || 'External Wallet user';
     historyData.receivingWallet = historyData.receivingWallet || 'External Wallet user';
 
 
-    await TransactionHistoryRepo.save(historyData);
+    await queryRunner.manager.withRepository(TransactionHistoryRepo).save(historyData);
 }
 
 

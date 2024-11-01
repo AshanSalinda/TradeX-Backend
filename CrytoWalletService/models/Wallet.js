@@ -4,7 +4,7 @@ module.exports = new EntitySchema({
     name: "Capital",
     tableName: "capital",
     columns: {
-        userId: {
+        walletId: {
             primary: true,
             type: "int",
             nullable: false,
@@ -25,4 +25,13 @@ module.exports = new EntitySchema({
             nullable: false,
         },
     },
+
+    relations: {
+        userDetail: {
+            target: "UserDetail",
+            type: "many-to-one",
+            joinColumn: { name: "walletId" },
+            onDelete: "CASCADE",
+        },
+    }
 })

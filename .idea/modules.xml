@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/TradeX-Web-Backend.iml" filepath="$PROJECT_DIR$/.idea/TradeX-Web-Backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/apiGateway.iml" filepath="$PROJECT_DIR$/apiGateway.iml" />
     </modules>
   </component>
 </project>

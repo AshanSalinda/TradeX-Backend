@@ -1,3 +1,15 @@
+## Developers
+
+<a href="https://github.com/IsuruVithanage/TradeX-Web/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=IsuruVithanage/TradeX-Web" />
+</a>
+
+---
+
+## Trailer
+
+https://github.com/user-attachments/assets/e335e7a5-f9cd-4b1d-a77d-f08e41147aaa
+
 # TradeX-Web-Backend
 TradeX is a simulation trading application that allows all traders to practise their strategies in a risk-free environment.
 
@@ -14,6 +26,22 @@ tradex-backend
 │  └─ vcs.xml
 ├─ .vscode
 │  └─ settings.json
+├─ apiGateway
+│  ├─ config
+│  │  └─ models
+│  │     └─ application.json
+│  │     └─ credentials.json
+│  │     └─ users.json
+│  │  └─ gateway.config.yml
+│  │  └─ sync.config.yml
+│  ├─ plugins
+│  │  └─ checkRolePlugin
+│  │     └─ policies
+│  │        └─ checkRole.js
+│  │     └─ manifest.js
+│  ├─ server.js
+│  ├─ package-lock.json
+│  ├─ package.json
 ├─ AdminService
 │  ├─ .gitignore
 │  ├─ config

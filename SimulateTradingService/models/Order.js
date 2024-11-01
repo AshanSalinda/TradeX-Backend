@@ -31,6 +31,9 @@ module.exports = new EntitySchema({
         quantity: {
             type: "float",
         },
+        stopLimit: {
+            type: "float",
+        },
         totalPrice: {
             type: "float",
         },

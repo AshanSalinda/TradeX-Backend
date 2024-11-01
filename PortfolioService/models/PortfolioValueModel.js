@@ -6,14 +6,9 @@ const columns = {
         type: "int",
         nullable: false,
     },
-    recordNo: {
-        primary: true,
-        type: "int",
-        default: 1,
-        nullable: false,
-    },
     time: {
-        type: "timestamp with time zone",
+        primary: true,
+        type: "float",
         nullable: false,
     },
     value: {
@@ -22,23 +17,35 @@ const columns = {
     },
 };
 
+const relations = {
+    walletAddress: {
+        type: "many-to-one",
+        target: "WalletAddress",
+        joinColumn: { name: "userId" },
+        onDelete: "CASCADE",
+    },
+};
+
 
 const PortfolioHourlyValue = new EntitySchema({
     name: "PortfolioHourlyValue",
     tableName: "portfolioHourlyValue",
-    columns: columns
+    columns: columns,
+    relations: relations
 });
 
 const PortfolioDailyValue = new EntitySchema({
     name: "PortfolioDailyValue",
     tableName: "portfolioDailyValue",
-    columns: columns
+    columns: columns,
+    relations: relations
 });
 
 const PortfolioWeeklyValue = new EntitySchema({
     name: "PortfolioWeeklyValue",
     tableName: "portfolioWeeklyValue",
-    columns: columns
+    columns: columns,
+    relations: relations
 });
 
 module.exports = [
